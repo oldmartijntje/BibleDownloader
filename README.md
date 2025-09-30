@@ -69,6 +69,25 @@ A modern Node.js web application for downloading various Bible translations from
 4. **Monitor Progress**: Watch real-time progress updates
 5. **Access Files**: Downloaded files are saved in the `downloads` folder
 
+### Resume Functionality
+
+The application includes intelligent resume functionality:
+
+- **Automatic Detection**: When restarting a cancelled download, the system automatically detects existing files
+- **File Validation**: Checks existing files for:
+  - Minimum size requirements (>100 bytes)
+  - Valid HTML content structure
+  - Absence of error indicators (404, access denied, etc.)
+- **Smart Cleanup**: Automatically removes corrupted or incomplete files
+- **Progress Tracking**: Accurately shows remaining work after accounting for existing valid files
+
+**Example Resume Process:**
+```
+Found 23 existing valid files, 2 files need re-downloading...
+Skipping Genesis 1 - already downloaded
+Downloading Genesis 2...
+```
+
 ## File Format
 
 The application generates `.bible` files in UTF-8 format with the following structure:
@@ -149,6 +168,9 @@ npm test
 
 # Test port conflict handling (demonstrates automatic port detection)
 npm run test:port-conflict
+
+# Test resume functionality (creates test files and validates detection logic)
+npm run test:resume
 ```
 
 ## Contributing

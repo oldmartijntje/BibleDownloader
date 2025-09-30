@@ -80,6 +80,18 @@ class DownloadService {
         let completedChapters = 0;
         const totalChapters = bibleStructure.reduce((sum, book) => sum + book.chapters, 0);
 
+        // Scan for existing valid files before starting
+        const existingFiles = await this.scanExistingFiles(bibleStructure);
+        if (existingFiles.validCount > 0) {
+            this.progress.message = `Found ${existingFiles.validCount} existing valid files, ${existingFiles.invalidCount} files need re-downloading...`;
+            this.logger?.info(`Resume download - Found ${existingFiles.validCount} valid files, ${existingFiles.invalidCount} invalid files, ${existingFiles.missingCount} missing files`);
+
+            // Update completed chapters count to reflect existing valid files
+            completedChapters = existingFiles.validCount;
+            this.progress.completedChapters = completedChapters;
+            this.progress.percentage = Math.round((completedChapters / totalChapters) * 100);
+        }
+
         for (let bookIndex = 0; bookIndex < bibleStructure.length; bookIndex++) {
             if (this.cancelled) return;
 
@@ -93,8 +105,16 @@ class DownloadService {
                     this.progress.currentChapter = chapter;
                     this.progress.message = `Downloading ${book.name} ${chapter}...`;
 
+                    const filename = `${book.abbreviation}_${chapter.toString().padStart(3, '0')}.html`;
+                    const filepath = path.join(this.htmlDir, filename);
+                    const wasAlreadyValid = await this.isValidExistingFile(filepath);
+
                     await this.downloadChapter(book, chapter);
-                    completedChapters++;
+
+                    // Only increment if we didn't already count this file
+                    if (!wasAlreadyValid) {
+                        completedChapters++;
+                    }
 
                     this.progress.completedChapters = completedChapters;
                     this.progress.percentage = Math.round((completedChapters / totalChapters) * 100);
@@ -133,8 +153,10 @@ class DownloadService {
         const filename = `${book.abbreviation}_${chapterNum.toString().padStart(3, '0')}.html`;
         const filepath = path.join(this.htmlDir, filename);
 
-        // Skip if file already exists (resume capability)
-        if (await fs.pathExists(filepath)) {
+        // Check if file already exists and is valid (resume capability)
+        if (await this.isValidExistingFile(filepath)) {
+            // Update progress message to indicate we're skipping this file
+            this.progress.message = `Skipping ${book.name} ${chapterNum} - already downloaded`;
             return;
         }
 
@@ -444,6 +466,93 @@ class DownloadService {
 
     getProgress() {
         return { ...this.progress };
+    }
+
+    async scanExistingFiles(bibleStructure) {
+        let validCount = 0;
+        let invalidCount = 0;
+        let missingCount = 0;
+
+        for (const book of bibleStructure) {
+            for (let chapter = 1; chapter <= book.chapters; chapter++) {
+                const filename = `${book.abbreviation}_${chapter.toString().padStart(3, '0')}.html`;
+                const filepath = path.join(this.htmlDir, filename);
+
+                if (await this.isValidExistingFile(filepath)) {
+                    validCount++;
+                } else if (await fs.pathExists(filepath)) {
+                    invalidCount++;
+                    // Remove invalid file so it can be re-downloaded
+                    try {
+                        await fs.remove(filepath);
+                        this.logger?.info(`Removed invalid file: ${filepath}`);
+                        missingCount++;
+                    } catch (error) {
+                        this.logger?.warn(`Could not remove invalid file ${filepath}:`, error);
+                        invalidCount++; // Keep it as invalid if we can't remove it
+                        missingCount--;
+                    }
+                } else {
+                    missingCount++;
+                }
+            }
+        }
+
+        return { validCount, invalidCount, missingCount };
+    }
+
+    async isValidExistingFile(filepath) {
+        try {
+            if (!(await fs.pathExists(filepath))) {
+                return false;
+            }
+
+            const stats = await fs.stat(filepath);
+
+            // Check if file is empty or very small (likely corrupted/incomplete)
+            if (stats.size < 100) {
+                this.logger?.warn(`File ${filepath} is too small (${stats.size} bytes), will re-download`);
+                return false;
+            }
+
+            // Read a small portion to check if it contains HTML content
+            const content = await fs.readFile(filepath, 'utf8');
+
+            // Basic checks for valid HTML content
+            if (!content.includes('<html') && !content.includes('<!DOCTYPE')) {
+                this.logger?.warn(`File ${filepath} doesn't appear to be valid HTML, will re-download`);
+                return false;
+            }
+
+            // Check for common error indicators in the content
+            const errorIndicators = [
+                'error',
+                'not found',
+                '404',
+                'access denied',
+                'forbidden',
+                'service unavailable',
+                'internal server error'
+            ];
+
+            const contentLower = content.toLowerCase();
+            const hasErrors = errorIndicators.some(indicator =>
+                contentLower.includes(indicator) && contentLower.length < 1000
+            );
+
+            if (hasErrors) {
+                this.logger?.warn(`File ${filepath} appears to contain error content, will re-download`);
+                return false;
+            }
+
+            // If all checks pass, consider the file valid
+            this.logger?.info(`Skipping ${filepath} - valid existing file found`);
+            return true;
+
+        } catch (error) {
+            this.logger?.warn(`Error checking file ${filepath}:`, error);
+            return false;
+        }
     }
 
     delay(ms) {
