@@ -374,34 +374,43 @@ class BibleDownloader {
                 </div>
             </div>
             <div class="file-actions">
-                <button class="btn btn-small btn-primary" onclick="bibleDownloader.downloadFile('${file.path}', '${file.name}')">
+                <button class="btn btn-small btn-primary">
                     Download
                 </button>
-                <button class="btn btn-small btn-secondary" onclick="bibleDownloader.deleteFile('${file.type}', '${file.name}')">
+                <button class="btn btn-small btn-secondary">
                     Delete
                 </button>
             </div>
         `;
+
+        // Add event listeners instead of inline onclick handlers
+        const downloadBtn = item.querySelector('.btn-primary');
+        const deleteBtn = item.querySelector('.btn-secondary');
+
+        downloadBtn.addEventListener('click', () => {
+            this.downloadFile(file.path, file.name);
+        });
+
+        deleteBtn.addEventListener('click', () => {
+            this.deleteFile(file.type, file.name);
+        });
 
         return item;
     }
 
     async downloadFile(path, filename) {
         try {
-            const response = await fetch(path);
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } else {
-                this.showError('Failed to download file');
-            }
+            // For file downloads, we can simply open the URL directly
+            // The server handles the download headers appropriately
+            const a = document.createElement('a');
+            a.href = path;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            this.showMessage('Download started');
         } catch (error) {
             console.error('Download error:', error);
             this.showError('Failed to download file');
