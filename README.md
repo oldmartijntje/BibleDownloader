@@ -30,7 +30,6 @@ A modern Node.js web application for downloading various Bible translations from
 - NB: de Naardense Bijbel
 - NBG51: de Nieuwe Vertaling (1951)
 - NBV: de Nieuwe Bijbelvertaling
-- SV1637: de Statenvertaling (1637)
 - SV1750: de Statenvertaling (1750)
 - And many more...
 

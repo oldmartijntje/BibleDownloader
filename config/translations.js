@@ -139,19 +139,6 @@ const translations = {
         comment: ''
     },
 
-    SV1637: {
-        fullName: 'Statenvertaling (1637, original version)',
-        shortName: 'SV1637',
-        sheetName: 'SV1637',
-        language: 'nl - Nederlands',
-        license: 'Public domain',
-        isPublicDomain: true,
-        source: 'bijbelsdigitaal.nl',
-        joel3Bible: true,
-        mal4Bible: true,
-        comment: ''
-    },
-
     SV1750: {
         fullName: 'Statenvertaling (1750)',
         shortName: 'SV1750',

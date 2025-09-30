@@ -247,7 +247,7 @@ NODE_ENV=development npm start
 ### Important Notes
 
 1. **Public Domain Translations**: No restrictions
-   - KJV, ASV, WEB, SV1637, LS1910, etc.
+   - KJV, ASV, WEB, LS1910, etc.
 
 2. **Copyrighted Translations**: Requires legal agreement
    - Must be natural person (not corporation)
