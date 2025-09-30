@@ -180,6 +180,7 @@ class BibleDownloader {
         if (!this.selectedTranslation) return;
 
         const mode = document.querySelector('input[name="download-mode"]:checked').value;
+        const downloadSpeed = document.querySelector('input[name="download-speed"]:checked').value;
         const legalAgreement = document.getElementById('legal-checkbox').checked;
 
         try {
@@ -191,6 +192,7 @@ class BibleDownloader {
                 body: JSON.stringify({
                     translationId: this.selectedTranslation.id,
                     mode: mode,
+                    downloadSpeed: downloadSpeed,
                     legalAgreement: legalAgreement
                 })
             });
@@ -478,6 +480,13 @@ class BibleDownloader {
                 'download-only-desc': 'Download HTML files for later processing',
                 'full-process-text': 'Full Process',
                 'full-process-desc': 'Download and convert to .bible format',
+                'download-speed-title': 'Download Speed',
+                'conservative-text': 'Conservative',
+                'conservative-desc': 'Slowest, most respectful to servers (1-2 parallel)',
+                'balanced-text': 'Balanced',
+                'balanced-desc': 'Good speed while respecting servers (2-4 parallel)',
+                'aggressive-text': 'Fast',
+                'aggressive-desc': 'Fastest possible while avoiding rate limits (3-6 parallel)',
                 'start-download-text': 'Start Download',
                 'cancel-download-text': 'Cancel',
                 'progress-title': 'Download Progress',
@@ -496,6 +505,13 @@ class BibleDownloader {
                 'download-only-desc': 'Download HTML bestanden voor latere verwerking',
                 'full-process-text': 'Volledig Verwerken',
                 'full-process-desc': 'Download en converteer naar .bible formaat',
+                'download-speed-title': 'Download Snelheid',
+                'conservative-text': 'Conservatief',
+                'conservative-desc': 'Langzaamst, meest respectvol naar servers (1-2 parallel)',
+                'balanced-text': 'Gebalanceerd',
+                'balanced-desc': 'Goede snelheid met respect voor servers (2-4 parallel)',
+                'aggressive-text': 'Snel',
+                'aggressive-desc': 'Zo snel mogelijk zonder rate limits (3-6 parallel)',
                 'start-download-text': 'Start Download',
                 'cancel-download-text': 'Annuleren',
                 'progress-title': 'Download Voortgang',

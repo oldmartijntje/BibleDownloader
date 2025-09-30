@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "test": "jest",
     "test:port-conflict": "node test-port-conflict.js",
-    "test:resume": "node test-resume-functionality.js"
+    "test:resume": "node test-resume-functionality.js",
+    "performance": "node performance-comparison.js"
   },
   "keywords": [
     "bible",

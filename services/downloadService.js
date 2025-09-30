@@ -11,6 +11,7 @@ class DownloadService {
         this.mode = options.mode; // 'download-only' or 'full'
         this.downloadId = options.downloadId;
         this.logger = options.logger;
+        this.downloadSpeed = options.downloadSpeed || 'balanced'; // 'conservative', 'balanced', 'aggressive'
 
         this.progress = {
             status: 'initializing',
@@ -30,6 +31,19 @@ class DownloadService {
         this.outputDir = path.join(__dirname, '..', 'downloads');
         this.htmlDir = path.join(this.outputDir, 'html', this.translationId);
         this.bibleDir = path.join(this.outputDir, 'bible');
+
+        // Performance tracking for adaptive delays
+        this.performanceStats = {
+            successfulRequests: 0,
+            failedRequests: 0,
+            averageResponseTime: 0,
+            recentErrors: [],
+            lastRateLimitTime: null,
+            consecutiveSuccesses: 0
+        };
+
+        // Adaptive delay configuration based on download speed preference
+        this.delayConfig = this.getDelayConfig(this.downloadSpeed);
     }
 
     async start() {
@@ -92,16 +106,83 @@ class DownloadService {
             this.progress.percentage = Math.round((completedChapters / totalChapters) * 100);
         }
 
+        // Create a list of all chapters to download
+        const chaptersToDownload = [];
         for (let bookIndex = 0; bookIndex < bibleStructure.length; bookIndex++) {
+            const book = bibleStructure[bookIndex];
+            for (let chapter = 1; chapter <= book.chapters; chapter++) {
+                chaptersToDownload.push({ book, chapter, bookIndex });
+            }
+        }
+
+        // Determine concurrency level based on source
+        const concurrency = this.getConcurrencyLevel();
+        this.logger?.info(`Using concurrency level: ${concurrency} parallel downloads`);
+
+        // Process chapters in batches with concurrency control
+        await this.processBatchedDownloads(chaptersToDownload, concurrency, completedChapters, totalChapters);
+    }
+
+    getDelayConfig(speed) {
+        const configs = {
+            conservative: {
+                baseDelay: 500,           // Slower, more respectful
+                maxDelay: 10000,
+                rampUpFactor: 2.0,
+                rampDownFactor: 0.8,
+                currentDelay: 1000
+            },
+            balanced: {
+                baseDelay: 100,           // Good balance
+                maxDelay: 5000,
+                rampUpFactor: 1.5,
+                rampDownFactor: 0.9,
+                currentDelay: 300
+            },
+            aggressive: {
+                baseDelay: 50,            // Fast as possible while being respectful
+                maxDelay: 2000,
+                rampUpFactor: 1.2,
+                rampDownFactor: 0.95,
+                currentDelay: 100
+            }
+        };
+
+        return configs[speed] || configs.balanced;
+    }
+
+    getConcurrencyLevel() {
+        // Base concurrency by source
+        let baseConcurrency;
+        switch (this.translation.source) {
+            case 'bible.com':
+                baseConcurrency = { conservative: 2, balanced: 4, aggressive: 6 };
+                break;
+            case 'basisbijbel.nl':
+            case 'debijbel.nl':
+                baseConcurrency = { conservative: 1, balanced: 2, aggressive: 3 };
+                break;
+            default:
+                baseConcurrency = { conservative: 1, balanced: 2, aggressive: 4 };
+        }
+
+        return baseConcurrency[this.downloadSpeed] || baseConcurrency.balanced;
+    }
+
+    async processBatchedDownloads(chaptersToDownload, concurrency, initialCompletedChapters, totalChapters) {
+        let completedChapters = initialCompletedChapters;
+
+        // Process in batches to control concurrency
+        for (let i = 0; i < chaptersToDownload.length; i += concurrency) {
             if (this.cancelled) return;
 
-            const book = bibleStructure[bookIndex];
-            this.progress.currentBook = book.name;
-
-            for (let chapter = 1; chapter <= book.chapters; chapter++) {
-                if (this.cancelled) return;
+            const batch = chaptersToDownload.slice(i, i + concurrency);
+            const batchPromises = batch.map(async ({ book, chapter, bookIndex }) => {
+                if (this.cancelled) return { success: false, skipped: false };
 
                 try {
+                    // Update current progress
+                    this.progress.currentBook = book.name;
                     this.progress.currentChapter = chapter;
                     this.progress.message = `Downloading ${book.name} ${chapter}...`;
 
@@ -109,26 +190,12 @@ class DownloadService {
                     const filepath = path.join(this.htmlDir, filename);
                     const wasAlreadyValid = await this.isValidExistingFile(filepath);
 
+                    if (wasAlreadyValid) {
+                        return { success: true, skipped: true };
+                    }
+
                     await this.downloadChapter(book, chapter);
-
-                    // Only increment if we didn't already count this file
-                    if (!wasAlreadyValid) {
-                        completedChapters++;
-                    }
-
-                    this.progress.completedChapters = completedChapters;
-                    this.progress.percentage = Math.round((completedChapters / totalChapters) * 100);
-
-                    // Calculate estimated time remaining
-                    if (completedChapters > 5) {
-                        const elapsed = new Date() - this.progress.startTime;
-                        const averageTimePerChapter = elapsed / completedChapters;
-                        const remainingChapters = totalChapters - completedChapters;
-                        this.progress.estimatedTimeRemaining = new Date(Date.now() + (remainingChapters * averageTimePerChapter));
-                    }
-
-                    // Rate limiting to be respectful to servers
-                    await this.delay(1000 + Math.random() * 2000);
+                    return { success: true, skipped: false };
 
                 } catch (error) {
                     this.logger?.warn(`Failed to download ${book.name} ${chapter}:`, error);
@@ -139,11 +206,42 @@ class DownloadService {
                         timestamp: new Date()
                     });
 
-                    // Continue with next chapter unless it's a critical error
+                    // Handle rate limiting more aggressively
                     if (error.message.includes('rate limit') || error.message.includes('429')) {
-                        await this.delay(10000); // Wait 10 seconds on rate limit
+                        this.logger?.warn('Rate limit detected, reducing concurrency');
+                        await this.delay(5000); // Brief pause for rate limits
                     }
+
+                    return { success: false, skipped: false };
                 }
+            });
+
+            // Wait for batch to complete
+            const results = await Promise.all(batchPromises);
+
+            // Update progress
+            const newCompletions = results.filter(r => r.success && !r.skipped).length;
+            completedChapters += newCompletions;
+
+            this.progress.completedChapters = completedChapters;
+            this.progress.percentage = Math.round((completedChapters / totalChapters) * 100);
+
+            // Calculate estimated time remaining
+            if (completedChapters > 5) {
+                const elapsed = new Date() - this.progress.startTime;
+                const averageTimePerChapter = elapsed / (completedChapters - initialCompletedChapters);
+                const remainingChapters = totalChapters - completedChapters;
+                this.progress.estimatedTimeRemaining = new Date(Date.now() + (remainingChapters * averageTimePerChapter));
+            }
+
+            // Check error rate and adjust if needed
+            const errorRate = results.filter(r => !r.success).length / results.length;
+            if (errorRate > 0.3) { // If more than 30% failed
+                this.logger?.warn(`High error rate (${Math.round(errorRate * 100)}%) detected, adding delay between batches`);
+                await this.delay(2000); // Pause between batches if high error rate
+            } else {
+                // Small delay between batches to be respectful
+                await this.delay(200);
             }
         }
     }
@@ -157,39 +255,59 @@ class DownloadService {
         if (await this.isValidExistingFile(filepath)) {
             // Update progress message to indicate we're skipping this file
             this.progress.message = `Skipping ${book.name} ${chapterNum} - already downloaded`;
+            this.performanceStats.lastRequestSkipped = true;
             return;
         }
 
+        const startTime = Date.now();
+
         try {
             const response = await axios.get(url, {
-                timeout: 30000,
+                timeout: 15000, // Reduced timeout for faster failure detection
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (compatible; BibleDownloader/1.0; +https://github.com/user/bible-downloader)',
+                    'User-Agent': 'Mozilla/5.0 (compatible; BibleDownloader/1.0; Educational Use)',
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                     'Accept-Language': 'en-US,en;q=0.5',
-                    'Accept-Encoding': 'gzip, deflate',
+                    'Accept-Encoding': 'gzip, deflate, br',
                     'DNT': '1',
                     'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1'
+                    'Upgrade-Insecure-Requests': '1',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
                 }
             });
 
+            const responseTime = Date.now() - startTime;
+
             if (response.status === 200) {
                 await fs.writeFile(filepath, response.data, 'utf8');
+                this.updatePerformanceStats(true, responseTime);
+                this.logger?.debug(`Downloaded ${book.name} ${chapterNum} in ${responseTime}ms`);
             } else {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+                this.updatePerformanceStats(false, responseTime, error);
+                throw error;
             }
 
         } catch (error) {
+            const responseTime = Date.now() - startTime;
+
+            let errorMessage;
             if (error.response?.status === 429) {
-                throw new Error(`Rate limit exceeded (429)`);
+                errorMessage = `Rate limit exceeded (429)`;
             } else if (error.response?.status === 404) {
-                throw new Error(`Chapter not found (404)`);
+                errorMessage = `Chapter not found (404)`;
             } else if (error.code === 'ECONNABORTED') {
-                throw new Error(`Request timeout`);
+                errorMessage = `Request timeout`;
+            } else if (error.code === 'ECONNRESET' || error.code === 'ENOTFOUND') {
+                errorMessage = `Connection error: ${error.code}`;
             } else {
-                throw new Error(`Network error: ${error.message}`);
+                errorMessage = `Network error: ${error.message}`;
             }
+
+            const wrappedError = new Error(errorMessage);
+            this.updatePerformanceStats(false, responseTime, wrappedError);
+            throw wrappedError;
         }
     }
 
@@ -552,6 +670,92 @@ class DownloadService {
         } catch (error) {
             this.logger?.warn(`Error checking file ${filepath}:`, error);
             return false;
+        }
+    }
+
+    async adaptiveDelay() {
+        // Skip delay if file was already valid (no actual download happened)
+        if (this.performanceStats.lastRequestSkipped) {
+            this.performanceStats.lastRequestSkipped = false;
+            return;
+        }
+
+        // Dynamic delay based on source and performance
+        let delay = this.delayConfig.currentDelay;
+
+        // Source-specific base delays
+        switch (this.translation.source) {
+            case 'bible.com':
+                delay = Math.max(delay, 150); // Bible.com can handle faster requests
+                break;
+            case 'basisbijbel.nl':
+                delay = Math.max(delay, 300); // Be more conservative with smaller sites
+                break;
+            case 'debijbel.nl':
+                delay = Math.max(delay, 300);
+                break;
+            default:
+                delay = Math.max(delay, 250);
+        }
+
+        // Recent rate limit? Be more cautious
+        if (this.performanceStats.lastRateLimitTime &&
+            (Date.now() - this.performanceStats.lastRateLimitTime) < 60000) {
+            delay *= 2;
+        }
+
+        // Add small random variation to avoid synchronized requests
+        const variation = delay * 0.2;
+        const finalDelay = delay + (Math.random() * variation * 2 - variation);
+
+        this.logger?.debug(`Adaptive delay: ${Math.round(finalDelay)}ms (success streak: ${this.performanceStats.consecutiveSuccesses})`);
+
+        await this.delay(Math.round(finalDelay));
+    }
+
+    updatePerformanceStats(success, responseTime = 0, error = null) {
+        if (success) {
+            this.performanceStats.successfulRequests++;
+            this.performanceStats.consecutiveSuccesses++;
+
+            // Gradually reduce delay on continued success
+            if (this.performanceStats.consecutiveSuccesses >= 5) {
+                this.delayConfig.currentDelay = Math.max(
+                    this.delayConfig.baseDelay,
+                    this.delayConfig.currentDelay * this.delayConfig.rampDownFactor
+                );
+            }
+
+            // Track average response time
+            if (responseTime > 0) {
+                const total = this.performanceStats.averageResponseTime * this.performanceStats.successfulRequests;
+                this.performanceStats.averageResponseTime = (total + responseTime) / this.performanceStats.successfulRequests;
+            }
+        } else {
+            this.performanceStats.failedRequests++;
+            this.performanceStats.consecutiveSuccesses = 0;
+
+            if (error) {
+                this.performanceStats.recentErrors.push({
+                    error: error.message,
+                    timestamp: Date.now()
+                });
+
+                // Keep only recent errors (last 10 minutes)
+                this.performanceStats.recentErrors = this.performanceStats.recentErrors
+                    .filter(e => Date.now() - e.timestamp < 600000);
+
+                // Check for rate limiting indicators
+                if (error.message.includes('rate limit') ||
+                    error.message.includes('429') ||
+                    error.message.includes('Too Many Requests')) {
+                    this.performanceStats.lastRateLimitTime = Date.now();
+                    this.delayConfig.currentDelay = Math.min(
+                        this.delayConfig.maxDelay,
+                        this.delayConfig.currentDelay * this.delayConfig.rampUpFactor
+                    );
+                }
+            }
         }
     }
 

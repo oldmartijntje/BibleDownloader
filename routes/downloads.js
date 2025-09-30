@@ -9,7 +9,7 @@ const activeDownloads = new Map();
 // Start a new download
 router.post('/start', async (req, res) => {
     try {
-        const { translationId, mode = 'full', legalAgreement = false } = req.body;
+        const { translationId, mode = 'full', downloadSpeed = 'balanced', legalAgreement = false } = req.body;
 
         if (!translationId) {
             return res.status(400).json({
@@ -43,6 +43,7 @@ router.post('/start', async (req, res) => {
             translationId: translationId.toUpperCase(),
             translation,
             mode, // 'download-only' or 'full'
+            downloadSpeed, // 'conservative', 'balanced', 'aggressive'
             downloadId,
             logger: req.logger
         });

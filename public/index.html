@@ -77,6 +77,32 @@
                     </label>
                 </div>
 
+                <div class="options-group">
+                    <h4 id="download-speed-title">Download Speed</h4>
+                    <label class="radio-option">
+                        <input type="radio" name="download-speed" value="conservative">
+                        <span>
+                            <strong id="conservative-text">Conservative</strong>
+                            <small id="conservative-desc">Slowest, most respectful to servers (1-2 parallel)</small>
+                        </span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="download-speed" value="balanced" checked>
+                        <span>
+                            <strong id="balanced-text">Balanced</strong>
+                            <small id="balanced-desc">Good speed while respecting servers (2-4 parallel)</small>
+                        </span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="download-speed" value="aggressive">
+                        <span>
+                            <strong id="aggressive-text">Fast</strong>
+                            <small id="aggressive-desc">Fastest possible while avoiding rate limits (3-6
+                                parallel)</small>
+                        </span>
+                    </label>
+                </div>
+
                 <div class="action-buttons">
                     <button id="start-download" class="btn btn-primary" disabled>
                         <span id="start-download-text">Start Download</span>
