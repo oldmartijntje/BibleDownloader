@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs-extra');
 const winston = require('winston');
+const readline = require('readline');
+const net = require('net');
 require('dotenv').config();
 
 const translationRoutes = require('./routes/translations');
@@ -43,6 +45,58 @@ const ensureDirectories = async () => {
     } catch (error) {
         logger.error('Failed to create required directories:', error);
     }
+};
+
+// Check if port is available
+const isPortAvailable = (port) => {
+    return new Promise((resolve) => {
+        const server = net.createServer();
+        server.listen(port, () => {
+            server.once('close', () => resolve(true));
+            server.close();
+        });
+        server.on('error', () => resolve(false));
+    });
+};
+
+// Get a random available port
+const getRandomPort = () => {
+    return Math.floor(Math.random() * (65535 - 3001) + 3001);
+};
+
+// Find an available port starting from a random one
+const findAvailablePort = async () => {
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (attempts < maxAttempts) {
+        const port = getRandomPort();
+        if (await isPortAvailable(port)) {
+            return port;
+        }
+        attempts++;
+    }
+
+    throw new Error('Could not find an available port after multiple attempts');
+};
+
+// Prompt user for port selection
+const promptForPortChoice = (defaultPort, alternativePort) => {
+    return new Promise((resolve) => {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+        console.log(`\x1b[33m⚠ Port ${defaultPort} is already in use.\x1b[0m`);
+        console.log(`\x1b[36mWould you like to run the server on port ${alternativePort} instead?\x1b[0m`);
+
+        rl.question('\x1b[32m? (Y/n): \x1b[0m', (answer) => {
+            rl.close();
+            const choice = answer.toLowerCase().trim();
+            resolve(choice === '' || choice === 'y' || choice === 'yes');
+        });
+    });
 };
 
 // Middleware
@@ -114,18 +168,65 @@ process.on('SIGTERM', () => {
     process.exit(0);
 });
 
-// Start server
+// Start server with port conflict handling
 const startServer = async () => {
     try {
         await ensureDirectories();
 
-        app.listen(PORT, () => {
-            logger.info(`Bible Downloader server running on port ${PORT}`);
+        let serverPort = PORT;
+
+        // Check if the default port is available
+        if (!(await isPortAvailable(PORT))) {
+            try {
+                // Find an alternative port
+                const alternativePort = await findAvailablePort();
+
+                // Ask user if they want to use the alternative port
+                const useAlternative = await promptForPortChoice(PORT, alternativePort);
+
+                if (useAlternative) {
+                    serverPort = alternativePort;
+                    logger.info(`Using alternative port ${serverPort}`);
+                } else {
+                    console.log('\x1b[31m✖ Server startup cancelled by user.\x1b[0m');
+                    console.log(`\x1b[33m💡 Tip: You can free up port ${PORT} by running: \x1b[36mlsof -ti:${PORT} | xargs kill\x1b[0m`);
+                    console.log(`\x1b[33m💡 Or specify a different port: \x1b[36mPORT=3001 npm start\x1b[0m`);
+                    process.exit(0);
+                }
+            } catch (portError) {
+                logger.error('Could not find an available port:', portError);
+                console.log(`\x1b[31m✖ Unable to find an available port. Please free up port ${PORT} or specify a different port using PORT environment variable.\x1b[0m`);
+                process.exit(1);
+            }
+        }
+
+        // Start the server on the determined port
+        const server = app.listen(serverPort, () => {
+            console.log('\x1b[32m✓ Bible Downloader server started successfully!\x1b[0m');
+            logger.info(`Bible Downloader server running on port ${serverPort}`);
             logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-            logger.info(`Access the application at: http://localhost:${PORT}`);
+            console.log(`\x1b[36m🌐 Access the application at: \x1b[4mhttp://localhost:${serverPort}\x1b[0m`);
+
+            if (serverPort !== PORT) {
+                console.log(`\x1b[33m📝 Note: Running on port ${serverPort} instead of default port ${PORT}\x1b[0m`);
+            }
         });
+
+        // Handle server errors
+        server.on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                logger.error(`Port ${serverPort} is still in use`);
+                console.log(`\x1b[31m✖ Port ${serverPort} is unexpectedly in use. Please try again.\x1b[0m`);
+            } else {
+                logger.error('Server error:', error);
+                console.log(`\x1b[31m✖ Server error: ${error.message}\x1b[0m`);
+            }
+            process.exit(1);
+        });
+
     } catch (error) {
         logger.error('Failed to start server:', error);
+        console.log(`\x1b[31m✖ Failed to start server: ${error.message}\x1b[0m`);
         process.exit(1);
     }
 };

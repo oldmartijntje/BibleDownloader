@@ -54,6 +54,8 @@ A modern Node.js web application for downloading various Bible translations from
    npm run dev
    ```
 
+   **Port Conflict Handling**: If port 3000 is already in use, the application will automatically detect this and prompt you to use an alternative port, similar to Angular CLI behavior.
+
 5. **Access the application**:
    Open your browser to `http://localhost:3000`
 
@@ -113,6 +115,25 @@ node-bible-downloader/
 └── tests/                # Test files
 ```
 
+### Port Management
+
+The server includes intelligent port conflict handling:
+
+- **Automatic Detection**: Checks if the default port (3000) is available
+- **Interactive Prompts**: When port 3000 is occupied, prompts user to accept a random alternative port
+- **Helpful Messages**: Provides clear feedback and suggestions for resolving conflicts
+- **Custom Port**: Use `PORT=3001 npm start` to specify a different port
+
+Example interaction:
+```
+⚠ Port 3000 is already in use.
+Would you like to run the server on port 27882 instead?
+? (Y/n): y
+✓ Bible Downloader server started successfully!
+🌐 Access the application at: http://localhost:27882
+📝 Note: Running on port 27882 instead of default port 3000
+```
+
 ### API Endpoints
 
 - `GET /` - Main application interface
@@ -123,7 +144,11 @@ node-bible-downloader/
 
 ### Testing
 ```bash
+# Run main test suite
 npm test
+
+# Test port conflict handling (demonstrates automatic port detection)
+npm run test:port-conflict
 ```
 
 ## Contributing
