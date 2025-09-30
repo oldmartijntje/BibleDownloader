@@ -187,11 +187,13 @@ const sourcePatterns = {
     // Add other sources as needed
 };
 
-// Legal disclaimer text
+// Legal disclaimer text - this is the legal notice as it was displayed on the repository that I have forked (https://github.com/thrynae/BibleDownloader)
 const legalDisclaimer = {
     english: {
         title: 'IMPORTANT LEGAL NOTICE',
         content: [
+            'NOTE: This is the legal notice as it was displayed on the repository that I have forked (https://github.com/thrynae/BibleDownloader). If you think something is wrong or inaccurate, let me know and I\'ll take action accordingly. I am no legal expert.',
+            '',
             'Under Dutch law, downloading a copy of a copyright protected work is allowed if you are a natural person (i.e. a human, and not acting for a corporation) and the copy is for personal (home) use only, under the condition that you already own an otherwise legally acquired copy.',
             '',
             'WARNING: The law of your jurisdiction might be different. It may prohibit the use of this script or set different requirements.',
@@ -202,6 +204,8 @@ const legalDisclaimer = {
     dutch: {
         title: 'BELANGRIJK JURIDISCH BERICHT',
         content: [
+            'OPMERKING: Dit is de juridische kennisgeving zoals deze werd weergegeven in de repository die ik heb geforkt (https://github.com/thrynae/BibleDownloader). Als je denkt dat er iets klopt niet of onnauwkeurig is, laat het me weten en ik zal dienovereenkomstig actie ondernemen. Ik ben geen juridisch expert.',
+            '',
             'Het is onder het Nederlandse auteursrecht toegestaan om een kopie te maken van een werk waar auteursrecht op rust. Hiervoor gelden onder meer als voorwaarden dat de gebruiker een natuurlijke persoon is, dat het gaat om een thuiskopie voor eigen gebruik, en dat de gebruiker al een exemplaar in bezit heeft.',
             '',
             'WAARSCHUWING: De wet in uw jurisdictie kan anders zijn. Het kan het gebruik van deze applicatie verbieden of andere vereisten stellen.',

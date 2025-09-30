@@ -18,7 +18,7 @@
     "scripture",
     "web-scraping"
   ],
-  "author": "Converted from MATLAB BibleDownloader",
+  "author": "Converted from MATLAB BibleDownloader (https://github.com/thrynae/BibleDownloader)",
   "license": "CC-BY-NC-SA-4.0",
   "dependencies": {
     "express": "^4.18.2",

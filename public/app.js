@@ -78,7 +78,17 @@ class BibleDownloader {
                 contentDiv.innerHTML = '';
                 data.disclaimer.content.forEach(paragraph => {
                     const p = document.createElement('p');
-                    p.textContent = paragraph;
+
+                    // Check if paragraph contains URLs and make them clickable
+                    const urlRegex = /(https?:\/\/[^\s\)]+)/g;
+                    if (urlRegex.test(paragraph)) {
+                        // Replace URLs with clickable links
+                        const htmlContent = paragraph.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+                        p.innerHTML = htmlContent;
+                    } else {
+                        p.textContent = paragraph;
+                    }
+
                     contentDiv.appendChild(p);
                 });
             }

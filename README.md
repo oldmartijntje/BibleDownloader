@@ -122,6 +122,8 @@ The application generates `.bible` files in UTF-8 format with the following stru
 
 ## Legal Notice
 
+**NOTE**: This is the legal notice as it was displayed on the repository that I have forked (https://github.com/thrynae/BibleDownloader). If you think something is wrong or inaccurate, let me know and I'll take action accordingly. I am no legal expert.
+
 This application respects copyright laws and focuses primarily on public domain translations. For copyrighted translations, users must:
 
 1. Be a natural person (not acting for a corporation)
@@ -205,10 +207,13 @@ CC BY-NC-SA 4.0 (Creative Commons Attribution-NonCommercial-ShareAlike 4.0)
 
 ## Credits
 
-- Original MATLAB version by H.J. Wisselink
+- Original MATLAB version from repository: https://github.com/thrynae/BibleDownloader
 - Node.js conversion maintains the same functionality and legal compliance
 - Uses the Wayback Machine API for historical web content access
+- Legal notices are preserved from the original forked repository
 
 ## Disclaimer
+
+**NOTE**: This is the legal notice as it was displayed on the repository that I have forked (https://github.com/thrynae/BibleDownloader). If you think something is wrong or inaccurate, let me know and I'll take action accordingly. I am no legal expert.
 
 This software is provided as-is. Users are responsible for ensuring their use complies with all applicable laws and regulations. The developers assume no liability for misuse or legal violations.

@@ -97,6 +97,18 @@ body {
     color: #78350f;
 }
 
+.legal-notice a {
+    color: #1d4ed8;
+    text-decoration: underline;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.legal-notice a:hover {
+    color: #1e40af;
+    text-decoration: none;
+}
+
 .legal-agreement {
     margin-top: 1rem;
     padding-top: 1rem;
