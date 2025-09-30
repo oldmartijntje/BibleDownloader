@@ -293,7 +293,15 @@ class BibleDownloader {
 
         if (progress.estimatedTimeRemaining) {
             const eta = new Date(progress.estimatedTimeRemaining);
-            document.getElementById('estimated-time').textContent = eta.toLocaleTimeString();
+            const now = new Date();
+            const timeDiffMs = eta - now;
+
+            if (timeDiffMs > 0) {
+                const minutes = Math.ceil(timeDiffMs / (1000 * 60));
+                document.getElementById('estimated-time').textContent = `${minutes}m`;
+            } else {
+                document.getElementById('estimated-time').textContent = 'Almost done';
+            }
         } else {
             document.getElementById('estimated-time').textContent = '-';
         }
