@@ -23,13 +23,9 @@ A modern Node.js web application for downloading various Bible translations from
 
 ### Dutch
 - BB: de Basisbijbel
-- BGT: de Bijbel in Gewone Taal
-- GNB: Groot Nieuws Bijbel
 - HB: Het Boek
-- HSV: de Herziene Statenvertaling
 - NB: de Naardense Bijbel
 - NBG51: de Nieuwe Vertaling (1951)
-- NBV: de Nieuwe Bijbelvertaling
 - SV1750: de Statenvertaling (1750)
 - And many more...
 

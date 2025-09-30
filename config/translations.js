@@ -73,32 +73,6 @@ const translations = {
         comment: 'See menu on website'
     },
 
-    BGT: {
-        fullName: 'Bijbel in Gewone Taal',
-        shortName: 'BGT',
-        sheetName: 'BGT',
-        language: 'nl - Nederlands',
-        license: 'Copyright Nederlands Bijbelgenootschap 2014',
-        isPublicDomain: false,
-        source: 'debijbel.nl',
-        joel3Bible: true,
-        mal4Bible: true,
-        comment: ''
-    },
-
-    GNB: {
-        fullName: 'Groot Nieuws Bijbel',
-        shortName: 'GNB',
-        sheetName: 'GNB',
-        language: 'nl - Nederlands',
-        license: 'Copyright Nederlands Bijbelgenootschap/Katholieke Bijbelstichting 1983/1996',
-        isPublicDomain: false,
-        source: 'grootnieuwsbijbel.wordpress.com',
-        joel3Bible: true,
-        mal4Bible: true,
-        comment: 'version from 1996'
-    },
-
     HB: {
         fullName: 'Het Boek',
         shortName: 'HB',
@@ -108,32 +82,6 @@ const translations = {
         isPublicDomain: false,
         source: 'bible.com',
         bibleComId: 75,
-        joel3Bible: true,
-        mal4Bible: true,
-        comment: ''
-    },
-
-    HSV: {
-        fullName: 'Herziene Statenvertaling',
-        shortName: 'HSV',
-        sheetName: 'HSV',
-        language: 'nl - Nederlands',
-        license: 'Copyright Stichting Herziene Statenvertaling',
-        isPublicDomain: false,
-        source: 'herzienestatenvertaling.nl',
-        joel3Bible: true,
-        mal4Bible: true,
-        comment: ''
-    },
-
-    NBV: {
-        fullName: 'Nieuwe Bijbelvertaling',
-        shortName: 'NBV',
-        sheetName: 'NBV',
-        language: 'nl - Nederlands',
-        license: 'Copyright Nederlands Bijbelgenootschap 2004/2007',
-        isPublicDomain: false,
-        source: 'debijbel.nl',
         joel3Bible: true,
         mal4Bible: true,
         comment: ''
