@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bible Downloader - Node.js Version</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Bible Downloader</h1>
+            <p class="subtitle">Download various Bible translations in standardized format</p>
+            <div class="language-selector">
+                <label for="interface-language">Interface Language:</label>
+                <select id="interface-language">
+                    <option value="english">English</option>
+                    <option value="dutch">Nederlands</option>
+                </select>
+            </div>
+        </header>
+
+        <main class="main">
+            <!-- Legal Notice Section -->
+            <section class="legal-notice" id="legal-notice">
+                <div class="notice-content">
+                    <h2 id="legal-title">Important Legal Notice</h2>
+                    <div id="legal-content">
+                        <p>Loading legal information...</p>
+                    </div>
+                    <div class="legal-agreement">
+                        <label>
+                            <input type="checkbox" id="legal-checkbox">
+                            <span id="legal-agreement-text">I have read and agree to the terms above</span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Translation Selection -->
+            <section class="translation-selection">
+                <div class="selection-header">
+                    <h2 id="translations-title">Available Bible Translations</h2>
+                    <div class="filter-options">
+                        <label>
+                            <input type="checkbox" id="public-domain-only" checked>
+                            <span id="public-domain-text">Show only public domain translations</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="translations-grid" id="translations-grid">
+                    <div class="loading">Loading translations...</div>
+                </div>
+            </section>
+
+            <!-- Download Options -->
+            <section class="download-options" id="download-options" style="display: none;">
+                <h3 id="download-options-title">Download Options</h3>
+                <div class="options-group">
+                    <label class="radio-option">
+                        <input type="radio" name="download-mode" value="download-only" checked>
+                        <span>
+                            <strong id="download-only-text">Download Only</strong>
+                            <small id="download-only-desc">Download HTML files for later processing</small>
+                        </span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="download-mode" value="full">
+                        <span>
+                            <strong id="full-process-text">Full Process</strong>
+                            <small id="full-process-desc">Download and convert to .bible format</small>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="start-download" class="btn btn-primary" disabled>
+                        <span id="start-download-text">Start Download</span>
+                    </button>
+                    <button id="cancel-download" class="btn btn-secondary" style="display: none;">
+                        <span id="cancel-download-text">Cancel</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Progress Section -->
+            <section class="progress-section" id="progress-section" style="display: none;">
+                <h3 id="progress-title">Download Progress</h3>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="progress-percentage">0%</span>
+                        <span id="progress-message">Ready to start...</span>
+                    </div>
+                </div>
+
+                <div class="progress-details">
+                    <div class="detail-item">
+                        <label id="current-book-label">Current Book:</label>
+                        <span id="current-book">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label id="current-chapter-label">Current Chapter:</label>
+                        <span id="current-chapter">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label id="estimated-time-label">Estimated Time Remaining:</label>
+                        <span id="estimated-time">-</span>
+                    </div>
+                </div>
+
+                <div class="error-log" id="error-log" style="display: none;">
+                    <h4 id="error-log-title">Errors and Warnings</h4>
+                    <div class="error-list" id="error-list"></div>
+                </div>
+            </section>
+
+            <!-- Files Section -->
+            <section class="files-section">
+                <h3 id="files-title">Downloaded Files</h3>
+                <div class="files-controls">
+                    <button id="refresh-files" class="btn btn-secondary">
+                        <span id="refresh-files-text">Refresh</span>
+                    </button>
+                    <div class="file-type-filter">
+                        <select id="file-type-filter">
+                            <option value="all">All Files</option>
+                            <option value="bible">.bible Files</option>
+                            <option value="html">HTML Files</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="files-list" id="files-list">
+                    <div class="loading">Loading files...</div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2025 Bible Downloader - Node.js Version</p>
+            <p>Converted from original MATLAB version by H.J. Wisselink</p>
+            <p>Licensed under CC BY-NC-SA 4.0</p>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="translation-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Translation Details</h3>
+                <button class="close-button" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Translation details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
