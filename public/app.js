@@ -49,6 +49,8 @@ class BibleDownloader {
             this.loadFiles();
         });
 
+
+
         // File type filter
         document.getElementById('file-type-filter').addEventListener('change', () => {
             this.loadFiles();
@@ -361,6 +363,8 @@ class BibleDownloader {
         }
     }
 
+
+
     renderFiles(files) {
         const filesList = document.getElementById('files-list');
         filesList.innerHTML = '';
@@ -498,6 +502,8 @@ class BibleDownloader {
                 'download-only-desc': 'Download HTML files for later processing',
                 'full-process-text': 'Full Process',
                 'full-process-desc': 'Download and convert to .bible format',
+                'json-export-text': 'JSON Export',
+                'json-export-desc': 'Download and convert to JSON format (one file per book)',
                 'download-speed-title': 'Download Speed',
                 'conservative-text': 'Conservative',
                 'conservative-desc': 'Slowest, most respectful to servers (1-2 parallel)',
@@ -523,6 +529,8 @@ class BibleDownloader {
                 'download-only-desc': 'Download HTML bestanden voor latere verwerking',
                 'full-process-text': 'Volledig Verwerken',
                 'full-process-desc': 'Download en converteer naar .bible formaat',
+                'json-export-text': 'JSON Export',
+                'json-export-desc': 'Download en converteer naar JSON formaat (één bestand per boek)',
                 'download-speed-title': 'Download Snelheid',
                 'conservative-text': 'Conservatief',
                 'conservative-desc': 'Langzaamst, meest respectvol naar servers (1-2 parallel)',

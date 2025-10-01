@@ -1,2 +1,2 @@
-- [ ] strip unused ui elements
-- [ ] add json export
+- [x] strip unused ui elements
+- [x] add json export

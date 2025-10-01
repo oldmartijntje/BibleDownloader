@@ -31,6 +31,7 @@ class DownloadService {
         this.outputDir = path.join(__dirname, '..', 'downloads');
         this.htmlDir = path.join(this.outputDir, 'html', this.translationId);
         this.bibleDir = path.join(this.outputDir, 'bible');
+        this.jsonDir = path.join(this.outputDir, 'json', this.translationId);
 
         // Performance tracking for adaptive delays
         this.performanceStats = {
@@ -53,6 +54,7 @@ class DownloadService {
             // Ensure directories exist
             await fs.ensureDir(this.htmlDir);
             await fs.ensureDir(this.bibleDir);
+            await fs.ensureDir(this.jsonDir);
 
             this.progress.status = 'downloading';
             this.progress.message = 'Starting Bible download...';
@@ -70,6 +72,13 @@ class DownloadService {
                 this.progress.status = 'converting';
                 this.progress.message = 'Converting HTML files to .bible format...';
                 await this.convertToBibleFormat();
+
+                this.progress.message = 'Converting to JSON format...';
+                await this.convertToJsonFormat();
+            } else if (this.mode === 'json') {
+                this.progress.status = 'converting';
+                this.progress.message = 'Converting to JSON format...';
+                await this.convertToJsonFormat();
             }
 
             this.progress.status = 'completed';
@@ -394,6 +403,216 @@ class DownloadService {
         await fs.writeFile(bibleFilepath, bibleContent.join('\n'), 'utf8');
 
         this.logger?.info(`Created .bible file: ${bibleFilename}`);
+    }
+
+    async convertToJsonFormat() {
+        const bibleStructure = this.getBibleStructure();
+
+        // Process each book
+        for (let bookIndex = 0; bookIndex < bibleStructure.length; bookIndex++) {
+            const book = bibleStructure[bookIndex];
+
+            this.progress.message = `Converting ${book.name} to JSON...`;
+
+            const bookJson = {
+                source: this.translation.source,
+                version: this.translation.fullName,
+                book: book.name,
+                verses: []
+            };
+
+            // Collect all verses for this book
+            for (let chapter = 1; chapter <= book.chapters; chapter++) {
+                const filename = `${book.abbreviation}_${chapter.toString().padStart(3, '0')}.html`;
+                const filepath = path.join(this.htmlDir, filename);
+
+                if (await fs.pathExists(filepath)) {
+                    try {
+                        const htmlContent = await fs.readFile(filepath, 'utf8');
+                        const verses = await this.extractVersesForJson(htmlContent, book, chapter, bookIndex + 1);
+                        bookJson.verses.push(...verses);
+                    } catch (error) {
+                        this.logger?.warn(`Failed to process ${filename} for JSON:`, error);
+                        // Continue with other chapters even if one fails
+                    }
+                }
+            }
+
+            // Only save if we have verses
+            if (bookJson.verses.length > 0) {
+                const jsonFilename = `${book.abbreviation}.json`;
+                const jsonFilepath = path.join(this.jsonDir, jsonFilename);
+
+                await fs.writeFile(jsonFilepath, JSON.stringify(bookJson, null, 2), 'utf8');
+                this.logger?.info(`Created JSON file: ${jsonFilename} with ${bookJson.verses.length} verses`);
+            }
+        }
+
+        this.logger?.info(`Completed JSON conversion for ${this.translationId}`);
+    }
+
+    async extractVersesForJson(htmlContent, book, chapterNum, bookNumber) {
+        const verses = [];
+        const $ = cheerio.load(htmlContent);
+
+        // Different extraction methods based on source
+        switch (this.translation.source) {
+            case 'bible.com':
+                verses.push(...this.extractBibleComVersesForJson($, book, chapterNum, bookNumber));
+                break;
+
+            case 'debijbel.nl':
+                // This would be JSON response, not HTML
+                try {
+                    const jsonData = JSON.parse(htmlContent);
+                    verses.push(...this.extractDebijbelVersesForJson(jsonData, book, chapterNum, bookNumber));
+                } catch {
+                    // If it's not JSON, treat as HTML
+                    verses.push(...this.extractGenericVersesForJson($, book, chapterNum, bookNumber));
+                }
+                break;
+
+            default:
+                verses.push(...this.extractGenericVersesForJson($, book, chapterNum, bookNumber));
+                break;
+        }
+
+        return verses;
+    }
+
+    extractBibleComVersesForJson($, book, chapterNum, bookNumber) {
+        const verses = [];
+
+        // Try different selectors for Bible.com verses
+        const verseSelectors = [
+            '.ChapterContent_verse__57FIw', // New format
+            '.verse', // Generic
+            '[data-usfm]' // USFM data attribute
+        ];
+
+        let foundVerses = false;
+
+        for (const selector of verseSelectors) {
+            const verseElements = $(selector);
+
+            if (verseElements.length > 0) {
+                verseElements.each((index, element) => {
+                    const $verse = $(element);
+
+                    // Try to extract verse number from various sources
+                    let verseNum = null;
+
+                    // Try data-usfm attribute (e.g., "GEN.1.1")
+                    const usfm = $verse.attr('data-usfm');
+                    if (usfm) {
+                        const usfmMatch = usfm.match(/\d+\.(\d+)$/);
+                        if (usfmMatch) {
+                            verseNum = parseInt(usfmMatch[1]);
+                        }
+                    }
+
+                    // Try verse number in label
+                    if (!verseNum) {
+                        const labelText = $verse.find('.ChapterContent_label__R2PLt').text().trim();
+                        if (labelText && /^\d+$/.test(labelText)) {
+                            verseNum = parseInt(labelText);
+                        }
+                    }
+
+                    // Try data-verse attribute
+                    if (!verseNum) {
+                        const dataVerse = $verse.attr('data-verse');
+                        if (dataVerse && /^\d+$/.test(dataVerse)) {
+                            verseNum = parseInt(dataVerse);
+                        }
+                    }
+
+                    // Fallback to sequential numbering
+                    if (!verseNum) {
+                        verseNum = index + 1;
+                    }
+
+                    // Extract verse text, excluding verse numbers
+                    let verseText = $verse.find('.ChapterContent_content__RrUqA').text().trim();
+                    if (!verseText) {
+                        verseText = $verse.text().trim();
+                        // Remove leading verse numbers
+                        verseText = verseText.replace(/^\d+\s*/, '');
+                    }
+
+                    if (verseText && verseText.length > 0) {
+                        verses.push({
+                            book_name: book.name,
+                            book: bookNumber,
+                            chapter: chapterNum,
+                            verse: verseNum,
+                            text: verseText
+                        });
+                        foundVerses = true;
+                    }
+                });
+
+                if (foundVerses) {
+                    break; // Found verses with this selector, no need to try others
+                }
+            }
+        }
+
+        // Sort verses by verse number to ensure proper order
+        verses.sort((a, b) => a.verse - b.verse);
+
+        return verses;
+    }
+
+    extractDebijbelVersesForJson(jsonData, book, chapterNum, bookNumber) {
+        const verses = [];
+
+        if (jsonData.content && jsonData.content.verses) {
+            jsonData.content.verses.forEach(verse => {
+                verses.push({
+                    book_name: book.name,
+                    book: bookNumber,
+                    chapter: chapterNum,
+                    verse: parseInt(verse.verse),
+                    text: verse.text.trim()
+                });
+            });
+        }
+
+        return verses;
+    }
+
+    extractGenericVersesForJson($, book, chapterNum, bookNumber) {
+        const verses = [];
+
+        // Generic extraction - look for common patterns
+        const verseElements = $('p, div, span').filter((index, element) => {
+            const text = $(element).text().trim();
+            return /^\s*\d+\s/.test(text) && text.length > 10;
+        });
+
+        verseElements.each((index, element) => {
+            const $element = $(element);
+            const text = $element.text().trim();
+            const verseMatch = text.match(/^(\d+)\s+(.*)/);
+
+            if (verseMatch) {
+                const verseNum = parseInt(verseMatch[1]);
+                const verseText = verseMatch[2].trim();
+
+                if (verseText) {
+                    verses.push({
+                        book_name: book.name,
+                        book: bookNumber,
+                        chapter: chapterNum,
+                        verse: verseNum,
+                        text: verseText
+                    });
+                }
+            }
+        });
+
+        return verses;
     }
 
     async extractVerses(htmlContent, book, chapterNum) {
@@ -761,6 +980,85 @@ class DownloadService {
 
     delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Static method to export existing HTML files to JSON format
+    static async exportToJson(translationId, options = {}) {
+        const { translations } = require('../config/translations');
+        const translation = translations[translationId.toUpperCase()];
+
+        if (!translation) {
+            throw new Error(`Translation ${translationId} not found`);
+        }
+
+        // Create a temporary DownloadService instance for the extraction methods
+        const tempService = new DownloadService({
+            translationId: translationId.toUpperCase(),
+            translation,
+            mode: 'json-export',
+            downloadId: 'json-export'
+        });
+
+        await fs.ensureDir(tempService.jsonDir);
+
+        const bibleStructure = tempService.getBibleStructure();
+        const results = {
+            translationId: translationId.toUpperCase(),
+            booksProcessed: 0,
+            totalVerses: 0,
+            errors: []
+        };
+
+        // Process each book
+        for (let bookIndex = 0; bookIndex < bibleStructure.length; bookIndex++) {
+            const book = bibleStructure[bookIndex];
+
+            const bookJson = {
+                source: translation.source,
+                version: translation.fullName,
+                book: book.name,
+                verses: []
+            };
+
+            let bookHasVerses = false;
+
+            // Collect all verses for this book
+            for (let chapter = 1; chapter <= book.chapters; chapter++) {
+                const filename = `${book.abbreviation}_${chapter.toString().padStart(3, '0')}.html`;
+                const filepath = path.join(tempService.htmlDir, filename);
+
+                if (await fs.pathExists(filepath)) {
+                    try {
+                        const htmlContent = await fs.readFile(filepath, 'utf8');
+                        const verses = await tempService.extractVersesForJson(htmlContent, book, chapter, bookIndex + 1);
+
+                        if (verses.length > 0) {
+                            bookJson.verses.push(...verses);
+                            bookHasVerses = true;
+                        }
+                    } catch (error) {
+                        results.errors.push({
+                            book: book.name,
+                            chapter,
+                            error: error.message
+                        });
+                    }
+                }
+            }
+
+            // Only save if we have verses
+            if (bookHasVerses && bookJson.verses.length > 0) {
+                const jsonFilename = `${book.abbreviation}.json`;
+                const jsonFilepath = path.join(tempService.jsonDir, jsonFilename);
+
+                await fs.writeFile(jsonFilepath, JSON.stringify(bookJson, null, 2), 'utf8');
+
+                results.booksProcessed++;
+                results.totalVerses += bookJson.verses.length;
+            }
+        }
+
+        return results;
     }
 }
 

@@ -201,6 +201,51 @@ router.get('/active', (req, res) => {
     }
 });
 
+// Export existing HTML files to JSON format
+router.post('/export-json/:translationId', async (req, res) => {
+    try {
+        const { translationId } = req.params;
+
+        if (!translationId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Translation ID is required'
+            });
+        }
+
+        const translation = translations[translationId.toUpperCase()];
+        if (!translation) {
+            return res.status(404).json({
+                success: false,
+                error: 'Translation not found'
+            });
+        }
+
+        req.logger?.info(`Starting JSON export for ${translationId}`);
+
+        // Export to JSON format
+        const results = await DownloadService.exportToJson(translationId);
+
+        res.json({
+            success: true,
+            translationId: translationId.toUpperCase(),
+            message: 'JSON export completed successfully',
+            results: {
+                booksProcessed: results.booksProcessed,
+                totalVerses: results.totalVerses,
+                errors: results.errors
+            }
+        });
+
+    } catch (error) {
+        req.logger?.error(`Error exporting to JSON for ${req.params.translationId}:`, error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to export to JSON'
+        });
+    }
+});
+
 // Clean up completed downloads older than 1 hour
 router.post('/cleanup', (req, res) => {
     try {
