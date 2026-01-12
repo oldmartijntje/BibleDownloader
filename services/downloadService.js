@@ -407,6 +407,7 @@ class DownloadService {
 
     async convertToJsonFormat() {
         const bibleStructure = this.getBibleStructure();
+        const index = [];
 
         // Process each book
         for (let bookIndex = 0; bookIndex < bibleStructure.length; bookIndex++) {
@@ -445,7 +446,23 @@ class DownloadService {
 
                 await fs.writeFile(jsonFilepath, JSON.stringify(bookJson, null, 2), 'utf8');
                 this.logger?.info(`Created JSON file: ${jsonFilename} with ${bookJson.verses.length} verses`);
+
+                // Add to index
+                index.push({
+                    name: book.name,
+                    abbreviation: book.abbreviation,
+                    filename: jsonFilename,
+                    chapters: book.chapters,
+                    source: this.translation.source
+                });
             }
+        }
+
+        // Generate index.json
+        if (index.length > 0) {
+            const indexFilepath = path.join(this.jsonDir, 'index.json');
+            await fs.writeFile(indexFilepath, JSON.stringify(index, null, 2), 'utf8');
+            this.logger?.info(`Created index.json with ${index.length} books`);
         }
 
         this.logger?.info(`Completed JSON conversion for ${this.translationId}`);
@@ -1008,6 +1025,7 @@ class DownloadService {
             totalVerses: 0,
             errors: []
         };
+        const index = [];
 
         // Process each book
         for (let bookIndex = 0; bookIndex < bibleStructure.length; bookIndex++) {
@@ -1055,7 +1073,22 @@ class DownloadService {
 
                 results.booksProcessed++;
                 results.totalVerses += bookJson.verses.length;
+
+                // Add to index
+                index.push({
+                    name: book.name,
+                    abbreviation: book.abbreviation,
+                    filename: jsonFilename,
+                    chapters: book.chapters,
+                    source: translation.source
+                });
             }
+        }
+
+        // Generate index.json
+        if (index.length > 0) {
+            const indexFilepath = path.join(tempService.jsonDir, 'index.json');
+            await fs.writeFile(indexFilepath, JSON.stringify(index, null, 2), 'utf8');
         }
 
         return results;
