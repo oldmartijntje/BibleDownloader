@@ -14,7 +14,8 @@ const translations = {
         bibleComId: 12,
         joel3Bible: true,
         mal4Bible: true,
-        comment: 'http://web.archive.org/web/201710/https://www.bible.com/versions/12'
+        comment: 'http://web.archive.org/web/201710/https://www.bible.com/versions/12',
+        language: "EN"
     },
 
     KJV: {
@@ -28,7 +29,8 @@ const translations = {
         bibleComId: 1,
         joel3Bible: true,
         mal4Bible: true,
-        comment: 'http://web.archive.org/web/201709/https://www.bible.com/versions/1'
+        comment: 'http://web.archive.org/web/201709/https://www.bible.com/versions/1',
+        language: "EN"
     },
 
     NASB: {
@@ -42,7 +44,8 @@ const translations = {
         bibleComId: 100,
         joel3Bible: true,
         mal4Bible: true,
-        comment: 'Requires legal agreement for non-public domain use'
+        comment: 'Requires legal agreement for non-public domain use',
+        language: "EN"
     },
 
     WEB: {
@@ -56,7 +59,8 @@ const translations = {
         bibleComId: 206,
         joel3Bible: true,
         mal4Bible: true,
-        comment: 'http://web.archive.org/web/201709/https://www.bible.com/versions/206'
+        comment: 'http://web.archive.org/web/201709/https://www.bible.com/versions/206',
+        language: "EN"
     },
 
     // Dutch translations
@@ -70,7 +74,8 @@ const translations = {
         source: 'basisbijbel.nl',
         joel3Bible: true,
         mal4Bible: true,
-        comment: 'See menu on website'
+        comment: 'See menu on website',
+        language: "NL"
     },
 
     HB: {
@@ -84,7 +89,8 @@ const translations = {
         bibleComId: 75,
         joel3Bible: true,
         mal4Bible: true,
-        comment: ''
+        comment: '',
+        language: "NL"
     },
 
     SV1750: {
@@ -98,7 +104,8 @@ const translations = {
         bibleComId: 165,
         joel3Bible: true,
         mal4Bible: true,
-        comment: ''
+        comment: '',
+        language: "NL"
     },
 
     // French translations
@@ -113,7 +120,8 @@ const translations = {
         bibleComId: 93,
         joel3Bible: true,
         mal4Bible: true,
-        comment: ''
+        comment: '',
+        language: "FR"
     },
 
     // Spanish translations
@@ -128,7 +136,8 @@ const translations = {
         bibleComId: 147,
         joel3Bible: true,
         mal4Bible: true,
-        comment: ''
+        comment: '',
+        language: "ES"
     }
 };
 
