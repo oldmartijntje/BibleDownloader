@@ -63,21 +63,6 @@ const translations = {
         language: "EN"
     },
 
-    // Dutch translations
-    BB: {
-        fullName: 'Basisbijbel',
-        shortName: 'BB',
-        sheetName: 'BB',
-        language: 'nl - Nederlands',
-        license: 'Copyright stichting Basisbijbel',
-        isPublicDomain: false,
-        source: 'basisbijbel.nl',
-        joel3Bible: true,
-        mal4Bible: true,
-        comment: 'See menu on website',
-        language: "NL"
-    },
-
     HB: {
         fullName: 'Het Boek',
         shortName: 'HB',
