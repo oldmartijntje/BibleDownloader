@@ -408,24 +408,23 @@ class DownloadService {
     async convertToJsonFormat() {
         const bibleStructure = this.getBibleStructure();
         const index = [];
-        let src;
-        let version;
 
         // Process each book
         for (let bookIndex = 0; bookIndex < bibleStructure.length; bookIndex++) {
             const book = bibleStructure[bookIndex];
 
             this.progress.message = `Converting ${book.name} to JSON...`;
-            src = his.translation.source
-            version = his.translation.fullName
+            const src = this.translation.source;
+            const version = this.translation.fullName;
+
             const bookJson = {
                 source: this.translation.source,
                 version: this.translation.fullName,
                 book: book.name,
-                verses: []
+                chapters: {} // Changed from verses array to chapters object
             };
 
-            // Collect all verses for this book
+            // Collect verses organized by chapter
             for (let chapter = 1; chapter <= book.chapters; chapter++) {
                 const filename = `${book.abbreviation}_${chapter.toString().padStart(3, '0')}.html`;
                 const filepath = path.join(this.htmlDir, filename);
@@ -433,22 +432,40 @@ class DownloadService {
                 if (await fs.pathExists(filepath)) {
                     try {
                         const htmlContent = await fs.readFile(filepath, 'utf8');
-                        const verses = await this.extractVersesForJson(htmlContent, book, chapter, bookIndex + 1);
-                        bookJson.verses.push(...verses);
+                        const verses = await this.extractVersesForJson(
+                            htmlContent,
+                            book,
+                            chapter,
+                            bookIndex + 1
+                        );
+
+                        // Store verses under their chapter
+                        if (verses.length > 0) {
+                            bookJson.chapters[chapter] = verses;
+                        }
                     } catch (error) {
-                        this.logger?.warn(`Failed to process ${filename} for JSON:`, error);
-                        // Continue with other chapters even if one fails
+                        this.logger?.warn(
+                            `Failed to process ${filename} for JSON:`,
+                            error
+                        );
                     }
                 }
             }
 
-            // Only save if we have verses
-            if (bookJson.verses.length > 0) {
+            // Only save if we have chapters with verses
+            if (Object.keys(bookJson.chapters).length > 0) {
                 const jsonFilename = `${book.abbreviation}.json`;
                 const jsonFilepath = path.join(this.jsonDir, jsonFilename);
 
-                await fs.writeFile(jsonFilepath, JSON.stringify(bookJson, null, 2), 'utf8');
-                this.logger?.info(`Created JSON file: ${jsonFilename} with ${bookJson.verses.length} verses`);
+                await fs.writeFile(
+                    jsonFilepath,
+                    JSON.stringify(bookJson, null, 2),
+                    'utf8'
+                );
+                this.logger?.info(
+                    `Created JSON file: ${jsonFilename} with ${Object.keys(bookJson.chapters).length
+                    } chapters`
+                );
 
                 // Add to index
                 index.push({
@@ -464,15 +481,25 @@ class DownloadService {
         // Generate index.json
         if (index.length > 0) {
             const indexFilepath = path.join(this.jsonDir, 'index.json');
-            await fs.writeFile(indexFilepath, JSON.stringify({
-                source: src,
-                version: version,
-                books: index
-            }, null, 2), 'utf8');
+            await fs.writeFile(
+                indexFilepath,
+                JSON.stringify(
+                    {
+                        source: this.translation.source,
+                        version: this.translation.fullName,
+                        books: index
+                    },
+                    null,
+                    2
+                ),
+                'utf8'
+            );
             this.logger?.info(`Created index.json with ${index.length} books`);
         }
 
-        this.logger?.info(`Completed JSON conversion for ${this.translationId}`);
+        this.logger?.info(
+            `Completed JSON conversion for ${this.translationId}`
+        );
     }
 
     async extractVersesForJson(htmlContent, book, chapterNum, bookNumber) {
@@ -1028,7 +1055,6 @@ class DownloadService {
             throw new Error(`Translation ${translationId} not found`);
         }
 
-        // Create a temporary DownloadService instance for the extraction methods
         const tempService = new DownloadService({
             translationId: translationId.toUpperCase(),
             translation,
@@ -1055,24 +1081,33 @@ class DownloadService {
                 source: translation.source,
                 version: translation.fullName,
                 book: book.name,
-                verses: []
+                chapters: {} // Changed from verses array to chapters object
             };
 
             let bookHasVerses = false;
 
-            // Collect all verses for this book
+            // Collect verses organized by chapter
             for (let chapter = 1; chapter <= book.chapters; chapter++) {
                 const filename = `${book.abbreviation}_${chapter.toString().padStart(3, '0')}.html`;
                 const filepath = path.join(tempService.htmlDir, filename);
 
                 if (await fs.pathExists(filepath)) {
                     try {
-                        const htmlContent = await fs.readFile(filepath, 'utf8');
-                        const verses = await tempService.extractVersesForJson(htmlContent, book, chapter, bookIndex + 1);
+                        const htmlContent = await fs.readFile(
+                            filepath,
+                            'utf8'
+                        );
+                        const verses = await tempService.extractVersesForJson(
+                            htmlContent,
+                            book,
+                            chapter,
+                            bookIndex + 1
+                        );
 
                         if (verses.length > 0) {
-                            bookJson.verses.push(...verses);
+                            bookJson.chapters[chapter] = verses;
                             bookHasVerses = true;
+                            results.totalVerses += verses.length;
                         }
                     } catch (error) {
                         results.errors.push({
@@ -1085,14 +1120,17 @@ class DownloadService {
             }
 
             // Only save if we have verses
-            if (bookHasVerses && bookJson.verses.length > 0) {
+            if (bookHasVerses && Object.keys(bookJson.chapters).length > 0) {
                 const jsonFilename = `${book.abbreviation}.json`;
                 const jsonFilepath = path.join(tempService.jsonDir, jsonFilename);
 
-                await fs.writeFile(jsonFilepath, JSON.stringify(bookJson, null, 2), 'utf8');
+                await fs.writeFile(
+                    jsonFilepath,
+                    JSON.stringify(bookJson, null, 2),
+                    'utf8'
+                );
 
                 results.booksProcessed++;
-                results.totalVerses += bookJson.verses.length;
 
                 // Add to index
                 index.push({
@@ -1108,7 +1146,11 @@ class DownloadService {
         // Generate index.json
         if (index.length > 0) {
             const indexFilepath = path.join(tempService.jsonDir, 'index.json');
-            await fs.writeFile(indexFilepath, JSON.stringify(index, null, 2), 'utf8');
+            await fs.writeFile(
+                indexFilepath,
+                JSON.stringify(index, null, 2),
+                'utf8'
+            );
         }
 
         return results;
