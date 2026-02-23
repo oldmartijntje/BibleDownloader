@@ -408,13 +408,16 @@ class DownloadService {
     async convertToJsonFormat() {
         const bibleStructure = this.getBibleStructure();
         const index = [];
+        let src;
+        let version;
 
         // Process each book
         for (let bookIndex = 0; bookIndex < bibleStructure.length; bookIndex++) {
             const book = bibleStructure[bookIndex];
 
             this.progress.message = `Converting ${book.name} to JSON...`;
-
+            src = his.translation.source
+            version = his.translation.fullName
             const bookJson = {
                 source: this.translation.source,
                 version: this.translation.fullName,
@@ -461,7 +464,11 @@ class DownloadService {
         // Generate index.json
         if (index.length > 0) {
             const indexFilepath = path.join(this.jsonDir, 'index.json');
-            await fs.writeFile(indexFilepath, JSON.stringify(index, null, 2), 'utf8');
+            await fs.writeFile(indexFilepath, JSON.stringify({
+                source: src,
+                version: version,
+                books: index
+            }, null, 2), 'utf8');
             this.logger?.info(`Created index.json with ${index.length} books`);
         }
 
