@@ -771,7 +771,7 @@ class DownloadService {
     getBibleStructure() {
         // Determine which language to use for book names
         const translationLanguage = this.translation.language?.toUpperCase() || 'EN';
-        const useEnglish = translationLanguage === 'EN';
+        const useEnglish = translationLanguage != 'NL';
 
         // Get the appropriate book names array
         const localizedNames = useEnglish ? bookNames.english : bookNames.dutch;
